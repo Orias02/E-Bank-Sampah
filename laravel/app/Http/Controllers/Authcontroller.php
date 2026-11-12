@@ -37,17 +37,24 @@ class AuthController extends Controller
 
         $user = Auth::user();
 
+        // Admin langsung ke dashboard admin.
+        if ($user->role === 'admin') {
+            $request->session()->regenerate();
+
+            return redirect()->intended(route('admin.dashboard'));
+        }
+
         // Nasabah baru baru bisa masuk setelah admin memverifikasi (status 'aktif').
         if ($user->role === 'nasabah') {
-            $status = Nasabah::where('user_id', $user->id)->value('status');
+            $nasabah = Nasabah::where('user_id', $user->id)->first();
 
-            if ($status !== 'aktif') {
+            if (! $nasabah || $nasabah->status !== 'aktif') {
                 Auth::logout();
                 $request->session()->invalidate();
                 $request->session()->regenerateToken();
 
                 return back()
-                    ->withErrors(['email' => 'Akun Anda belum aktif. Hubungi Helpdesk untuk konfirmasi.'])
+                    ->withErrors(['email' => $nasabah?->pesanStatus() ?? 'Akun Anda belum aktif. Hubungi Helpdesk untuk konfirmasi.'])
                     ->onlyInput('email');
             }
         }

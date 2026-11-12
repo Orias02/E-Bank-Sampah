@@ -12,7 +12,7 @@ class KatalogController extends Controller
     public function __invoke(): View
     {
         // Urutan mengikuti urutan data dimasukkan (id), jadi admin bisa mengatur urutan tampil lewat urutan input.
-        $jenisSampah = JenisSampah::orderBy('id')->get();
+        $jenisSampah = JenisSampah::aktif()->orderBy('id')->get();
 
         $terakhir = $jenisSampah->max('harga_diperbarui_pada');
 

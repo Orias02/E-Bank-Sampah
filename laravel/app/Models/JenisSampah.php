@@ -19,6 +19,7 @@ class JenisSampah extends Model
         'harga_sebelumnya',
         'harga_diperbarui_pada',
         'ikon',
+        'aktif',
     ];
 
     protected function casts(): array
@@ -27,7 +28,13 @@ class JenisSampah extends Model
             'harga_per_kg' => 'integer',
             'harga_sebelumnya' => 'integer',
             'harga_diperbarui_pada' => 'date',
+            'aktif' => 'boolean',
         ];
+    }
+
+    public function scopeAktif($query)
+    {
+        return $query->where('aktif', true);
     }
 
     /**

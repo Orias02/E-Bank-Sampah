@@ -7,6 +7,7 @@ use App\Models\PengajuanSetoran;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -33,7 +34,7 @@ class SetorController extends Controller
 
         return view('nasabah.setor', [
             'nasabah' => $nasabah,
-            'jenisSampah' => JenisSampah::orderBy('id')->get(['id', 'nama', 'ikon']),
+            'jenisSampah' => JenisSampah::aktif()->orderBy('id')->get(['id', 'nama', 'ikon']),
             'tanggalMin' => now()->toDateString(),
             'tanggalMax' => now()->addDays(self::MAKS_HARI)->toDateString(),
             'tanggalDefault' => now()->addDays(3)->toDateString(),
@@ -55,7 +56,7 @@ class SetorController extends Controller
         $data = $request->validate([
             'metode' => ['required', 'in:' . PengajuanSetoran::ANTAR . ',' . PengajuanSetoran::JEMPUT],
             'jenis_sampah' => ['required', 'array', 'min:1'],
-            'jenis_sampah.*' => ['integer', 'exists:jenis_sampah,id'],
+            'jenis_sampah.*' => ['integer', Rule::exists('jenis_sampah', 'id')->where('aktif', true)],
             'berat' => ['nullable', 'array'],
             'tanggal_rencana' => ['required', 'date', 'after_or_equal:today', 'before_or_equal:' . now()->addDays(self::MAKS_HARI)->toDateString()],
             'catatan' => ['nullable', 'string', 'max:500'],

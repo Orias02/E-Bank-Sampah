@@ -18,7 +18,7 @@ class EnsureNasabahAktif
     {
         $nasabah = Nasabah::where('user_id', $request->user()->id)->first();
 
-        // Akun login yang bukan nasabah (mis. admin) belum punya halaman di area ini.
+        // Akun login yang bukan nasabah (mis. admin) tidak punya akses ke area ini.
         abort_if($nasabah === null, 403, 'Halaman ini khusus untuk nasabah.');
 
         // Akun dinonaktifkan admin setelah pengguna login: keluarkan.
@@ -28,7 +28,7 @@ class EnsureNasabahAktif
             $request->session()->regenerateToken();
 
             return redirect()->route('login')
-                ->withErrors(['email' => 'Akun Anda belum aktif. Hubungi Helpdesk untuk konfirmasi.']);
+                ->withErrors(['email' => $nasabah->pesanStatus()]);
         }
 
         $request->attributes->set('nasabah', $nasabah);

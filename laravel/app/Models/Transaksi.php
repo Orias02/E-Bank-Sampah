@@ -18,6 +18,7 @@ class Transaksi extends Model
 
     protected $fillable = [
         'nasabah_id',
+        'pengajuan_setoran_id',
         'jenis_sampah_id',
         'tipe',
         'metode',
@@ -27,6 +28,7 @@ class Transaksi extends Model
         'nilai',
         'status',
         'keterangan',
+        'dicatat_oleh',
         'tanggal',
     ];
 

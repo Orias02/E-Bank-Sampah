@@ -2,7 +2,8 @@
  * Interaksi form pendaftaran nasabah (langkah Data Diri dan Alamat), form Profil, Setor Sampah, Tarik Saldo,
  * dan filter Katalog Harga Sampah.
  * Dimuat otomatis dari resources/js/auth.js (tidak perlu diimpor di app.js).
- * Form dipilih lewat atribut data-wizard-form="data-diri", "alamat", "profil", "setor", atau "tarik".
+ * Form dipilih lewat atribut data-wizard-form="data-diri", "alamat", "profil", "setor", "tarik",
+ * serta form admin "timbang" (hasil timbangan) dan "harga" (jenis & harga sampah).
  *
  * Validasi di browser memakai pesan dan elemen yang sama dengan error dari server
  * (data-field, data-hint, data-error), jadi tampilannya selalu konsisten.
@@ -818,6 +819,144 @@ function initKatalog(root) {
     });
 }
 
+/* ------------------------------------------------------------------
+   Admin: form hasil timbangan (pengajuan dan setoran langsung)
+------------------------------------------------------------------- */
+function initTimbangForm(form) {
+    const MAX_BERAT = 1000;
+
+    const rows = $$('[data-timbang-row]', form).map((row) => ({
+        nama: row.dataset.nama,
+        harga: Number(row.dataset.harga) || 0,
+        input: $('[data-berat]', row),
+        subtotal: $('[data-subtotal]', row),
+    }));
+    const totalKg = $('[data-total-kg]', form);
+    const totalNilai = $('[data-total-nilai]', form);
+    const hasMetode = Boolean($('[data-field="metode"]', form));
+
+    const parseBerat = (raw) => parseFloat(String(raw).replace(',', '.'));
+    const beratFormat = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 2 });
+    const rupiah = (n) => `Rp ${Math.round(n).toLocaleString('id-ID')}`;
+    const filled = () => rows.filter(({ input }) => input.value.trim() !== '');
+
+    // Seperti form Setor: selama masih mengisi, jangan menegur yang belum diisi; pemeriksaan penuh saat kirim.
+    let submitting = false;
+    form.addEventListener('submit', () => {
+        submitting = true;
+        setTimeout(() => (submitting = false), 0);
+    });
+
+    const readers = {
+        berat: () => rows.map(({ input }) => input.value.trim()).join('|'),
+    };
+    const validators = {
+        berat() {
+            const strict = submitting || field('berat')?.dataset.invalid === 'true';
+
+            for (const { nama, input } of filled()) {
+                const n = parseBerat(input.value);
+                if (!(n > 0)) return `Berat ${nama} harus lebih dari 0 kg.`;
+                if (n > MAX_BERAT) return `Berat ${nama} maksimal ${MAX_BERAT.toLocaleString('id-ID')} kg.`;
+            }
+            if (strict && filled().length === 0) return 'Isi berat minimal satu kategori.';
+        },
+    };
+
+    if (hasMetode) {
+        readers.metode = () => $('input[name="metode"]:checked', form)?.value ?? '';
+        validators.metode = (v) => (v ? undefined : 'Pilih cara sampah diterima.');
+    }
+
+    const wizard = createWizard(form, { readers, validators });
+    const field = wizard.field;
+
+    const render = () => {
+        let kg = 0;
+        let nilai = 0;
+
+        rows.forEach(({ input, harga, subtotal }) => {
+            const n = parseBerat(input.value);
+            const sub = n > 0 ? Math.round(n * harga) : 0;
+            if (n > 0) {
+                kg += n;
+                nilai += sub;
+            }
+            subtotal.textContent = n > 0 ? rupiah(sub) : '-';
+            subtotal.classList.toggle('text-neutral-400', !(n > 0));
+            subtotal.classList.toggle('text-neutral-900', n > 0);
+        });
+
+        totalKg.textContent = `${beratFormat.format(Math.round(kg * 100) / 100)} kg`;
+        totalNilai.textContent = rupiah(nilai);
+    };
+
+    // Berat: angka dengan satu koma/titik, maksimal 4 digit dan 2 desimal
+    rows.forEach(({ input }) => {
+        input.addEventListener('input', () => {
+            let value = input.value.replace(/[^\d.,]/g, '');
+            const sep = value.search(/[.,]/);
+            if (sep === -1) {
+                value = value.slice(0, 4);
+            } else {
+                value = value.slice(0, Math.min(sep, 4)) + value[sep] + value.slice(sep + 1).replace(/[.,]/g, '').slice(0, 2);
+            }
+            input.value = value;
+            render();
+        });
+    });
+
+    render();
+}
+
+/* ------------------------------------------------------------------
+   Admin: form jenis sampah dan harga
+------------------------------------------------------------------- */
+function initHargaForm(form) {
+    const MAX_HARGA = 10_000_000;
+
+    const nama = $('#nama', form);
+    const kategori = $('#kategori', form);
+    const harga = $('#harga_per_kg', form);
+    const deskripsi = $('#deskripsi', form);
+    const digits = (v) => v.replace(/\D/g, '');
+
+    const readers = {
+        nama: () => nama.value.trim(),
+        kategori: () => kategori.value.trim(),
+        harga_per_kg: () => digits(harga.value),
+        deskripsi: () => deskripsi.value,
+        ikon: () => $('input[name="ikon"]:checked', form)?.value ?? '',
+    };
+
+    const validators = {
+        nama(v) {
+            if (!v) return 'Nama jenis sampah wajib diisi.';
+            if (v.length > 100) return 'Nama maksimal 100 karakter.';
+        },
+        kategori(v) {
+            if (!v) return 'Kategori wajib diisi.';
+            if (v.length > 30) return 'Kategori maksimal 30 karakter.';
+        },
+        harga_per_kg(v) {
+            if (!v) return 'Harga per kg wajib diisi.';
+            if (Number(v) < 1) return 'Harga harus lebih dari 0.';
+            if (Number(v) > MAX_HARGA) return 'Harga terlalu besar.';
+        },
+        deskripsi: (v) => (v.length > 500 ? 'Deskripsi maksimal 500 karakter.' : undefined),
+        ikon: (v) => (v ? undefined : 'Pilih ikon.'),
+    };
+
+    createWizard(form, { readers, validators });
+
+    harga.addEventListener('input', () => {
+        formatKeepCaret(harga, (d) => {
+            d = d.slice(0, 8);
+            return d ? Number(d).toLocaleString('id-ID') : '';
+        });
+    });
+}
+
 function init() {
     const katalog = $('[data-katalog]');
     if (katalog && $('[data-item]', katalog)) initKatalog(katalog);
@@ -831,6 +970,8 @@ function init() {
     if (type === 'profil') initProfilForm(form);
     if (type === 'setor') initSetorForm(form);
     if (type === 'tarik') initTarikForm(form);
+    if (type === 'timbang') initTimbangForm(form);
+    if (type === 'harga') initHargaForm(form);
 }
 
 if (document.readyState === 'loading') {

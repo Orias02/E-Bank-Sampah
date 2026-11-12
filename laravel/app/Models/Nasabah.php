@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -27,6 +28,8 @@ class Nasabah extends Model
         'rw',
         'alamat_lengkap',
         'status',
+        'alasan_status',
+        'diverifikasi_pada',
         'foto_path',
         'metode_pencairan',
         'nomor_rekening',
@@ -36,6 +39,7 @@ class Nasabah extends Model
     {
         return [
             'tanggal_lahir' => 'date',
+            'diverifikasi_pada' => 'datetime',
         ];
     }
 
@@ -47,6 +51,24 @@ class Nasabah extends Model
     public function bankSampah(): BelongsTo
     {
         return $this->belongsTo(BankSampah::class);
+    }
+
+    /** Batasi ke nasabah di bank sampah milik admin. Admin tanpa bank sampah (super admin) melihat semuanya. */
+    public function scopeDiCakupan(Builder $query, $admin): Builder
+    {
+        return $admin->bank_sampah_id ? $query->where('bank_sampah_id', $admin->bank_sampah_id) : $query;
+    }
+
+    /** Pesan untuk nasabah yang mencoba masuk saat statusnya bukan 'aktif'. */
+    public function pesanStatus(): string
+    {
+        $alasan = $this->alasan_status ? ': ' . $this->alasan_status : '';
+
+        return match ($this->status) {
+            'ditolak' => "Pendaftaran Anda ditolak{$alasan}. Hubungi Helpdesk untuk bantuan.",
+            'nonaktif' => "Akun Anda dinonaktifkan{$alasan}. Hubungi Helpdesk untuk bantuan.",
+            default => 'Akun Anda belum aktif. Hubungi Helpdesk untuk konfirmasi.',
+        };
     }
 
     /** Nomor ID nasabah yang ditampilkan, mis. NAS-000012. */
