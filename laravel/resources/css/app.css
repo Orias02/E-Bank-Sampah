@@ -1,0 +1,126 @@
+@import 'tailwindcss';
+
+@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+@source '../../storage/framework/views/*.php';
+
+@theme {
+    --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+
+    --animate-fade-up: fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+    --animate-float: float 2.2s ease-in-out infinite;
+
+    @keyframes fade-up {
+        from {
+            opacity: 0;
+            transform: translateY(24px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes float {
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+        50% {
+            transform: translateY(6px);
+        }
+    }
+}
+
+/* ---------------------------------------------------------------
+   Dasar
+---------------------------------------------------------------- */
+html {
+    scroll-behavior: smooth;
+}
+
+/* ---------------------------------------------------------------
+   Muncul saat di-scroll (kelas .reveal, dipicu resources/js/landing.js)
+   Hanya aktif jika JS jalan (<html class="js">), jadi konten tetap
+   terlihat bila JavaScript dimatikan.
+---------------------------------------------------------------- */
+.js .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition:
+        opacity 0.8s cubic-bezier(0.22, 1, 0.36, 1),
+        transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+}
+
+.js .reveal.is-visible {
+    opacity: 1;
+    transform: none;
+}
+
+/* ---------------------------------------------------------------
+   Kartu dengan cahaya yang mengikuti kursor
+---------------------------------------------------------------- */
+.spotlight > * {
+    position: relative;
+}
+
+.spotlight::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    background: radial-gradient(
+        420px circle at var(--mx, 50%) var(--my, 50%),
+        rgb(255 255 255 / 0.09),
+        transparent 60%
+    );
+}
+
+.spotlight:hover::before {
+    opacity: 1;
+}
+
+/* ---------------------------------------------------------------
+   Akordeon FAQ (tinggi panel dianimasikan lewat grid-template-rows)
+---------------------------------------------------------------- */
+.faq-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.35s ease;
+}
+
+.faq-panel > div {
+    overflow: hidden;
+}
+
+[data-faq][data-open='true'] .faq-panel {
+    grid-template-rows: 1fr;
+}
+
+/* ---------------------------------------------------------------
+   Hormati pengguna yang mematikan animasi
+---------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    .js .reveal {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .animate-fade-up,
+    .animate-float {
+        animation: none !important;
+    }
+
+    .faq-panel {
+        transition: none;
+    }
+}
