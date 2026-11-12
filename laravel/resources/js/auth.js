@@ -82,6 +82,53 @@ function initMenus() {
     });
 }
 
+/* Profil: tombol "Ubah Foto" membuka pemilih berkas, lalu foto langsung diunggah */
+function initProfilePhoto() {
+    const form = $('[data-photo-form]');
+    if (!form) return;
+
+    const input = $('[data-photo-input]', form);
+    const trigger = $('[data-photo-trigger]', form);
+    const errorBox = $('[data-photo-error]');
+    const errorText = $('[data-photo-error-text]');
+    const MAX_BYTES = 2 * 1024 * 1024;
+
+    trigger.addEventListener('click', () => input.click());
+
+    input.addEventListener('change', () => {
+        const file = input.files[0];
+        if (!file) return;
+
+        let message = null;
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type) && !/\.(jpe?g|png|webp)$/i.test(file.name)) {
+            message = 'Format foto harus JPG, PNG, atau WebP.';
+        } else if (file.size > MAX_BYTES) {
+            message = 'Ukuran foto melebihi 2 MB. Pilih foto yang lebih kecil.';
+        }
+
+        if (message) {
+            input.value = ''; // berkas yang ditolak tidak ikut terkirim
+            errorText.textContent = message;
+            errorBox.hidden = false;
+            errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        errorBox.hidden = true;
+        trigger.disabled = true;
+        trigger.textContent = 'Mengunggah…';
+        form.submit();
+    });
+
+    // Kembali lewat tombol "back" browser: kembalikan tombolnya.
+    window.addEventListener('pageshow', (e) => {
+        if (!e.persisted) return;
+        trigger.disabled = false;
+        trigger.textContent = 'Ubah Foto';
+        input.value = '';
+    });
+}
+
 /* Jika server mengembalikan error, fokus ke kolom pertama yang bermasalah */
 function focusFirstInvalid() {
     $('[aria-invalid="true"]')?.focus();
@@ -92,6 +139,7 @@ function init() {
     initFormLoading();
     initPasswordMatch();
     initMenus();
+    initProfilePhoto();
     focusFirstInvalid();
 }
 

@@ -10,7 +10,7 @@
 
 @section('card')
     @php
-        // Dikirim DashboardController: $nasabah, $saldo (rupiah), $totalBerat (kg), $aktivitas (5 transaksi terakhir).
+        // Dikirim DashboardController: $nasabah, $saldo (rupiah), $totalBerat (kg), $aktivitas (5 aktivitas terakhir: transaksi + pengajuan setoran yang belum selesai).
         $rupiah = fn ($angka) => 'Rp ' . number_format($angka, 0, ',', '.');
         $kg = fn ($angka) => rtrim(rtrim(number_format($angka, 2, ',', '.'), '0'), ',') . ' kg';
 
@@ -18,8 +18,14 @@
             'selesai' => 'bg-emerald-50 text-[#2e7d32]',
             'proses' => 'bg-amber-50 text-amber-600',
             'dibatalkan' => 'bg-red-50 text-red-600',
+            'menunggu' => 'bg-amber-50 text-amber-600',
+            'diterima' => 'bg-sky-50 text-sky-700',
+            'ditolak' => 'bg-red-50 text-red-600',
         ];
-        $statusLabel = ['selesai' => 'Selesai', 'proses' => 'Proses', 'dibatalkan' => 'Dibatalkan'];
+        $statusLabel = [
+            'selesai' => 'Selesai', 'proses' => 'Proses', 'dibatalkan' => 'Dibatalkan',
+            'menunggu' => 'Menunggu', 'diterima' => 'Diterima', 'ditolak' => 'Ditolak',
+        ];
     @endphp
 
     <div class="h-px bg-neutral-200"></div>
@@ -101,24 +107,37 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-neutral-100">
-                            @foreach ($aktivitas as $trx)
+                            @foreach ($aktivitas as $item)
                                 @php
-                                    $penarikan = $trx->tipe === 'penarikan';
-                                    $nilaiClass = $trx->status === 'proses' ? 'text-amber-600' : ($penarikan ? 'text-neutral-800' : 'text-[#2e7d32]');
+                                    $penarikan = $item->tipe === 'penarikan';
+                                    $pengajuan = $item->tipe === 'pengajuan';
+                                    $nilaiClass = $item->status === 'ditolak' ? 'text-neutral-400 line-through' : ($pengajuan || $item->status === 'proses' ? 'text-amber-600' : ($penarikan ? 'text-neutral-800' : 'text-[#2e7d32]'));
                                 @endphp
                                 <tr>
                                     <td class="px-4 py-4">
                                         <span class="flex items-center gap-3 font-semibold text-neutral-900">
-                                            <x-icon :name="$penarikan ? 'wallet' : ($trx->jenisSampah?->ikon ?? 'recycle')" class="size-5 shrink-0" />
-                                            {{ $penarikan ? 'Penarikan Saldo' : ($trx->jenisSampah?->nama ?? 'Sampah') }}
+                                            <x-icon :name="$item->ikon" class="size-5 shrink-0" />
+                                            {{ $item->nama }}
                                         </span>
                                     </td>
-                                    <td class="whitespace-nowrap px-3 py-4 text-neutral-700">{{ $trx->tanggal->locale('id')->translatedFormat('j M Y') }}</td>
-                                    <td class="whitespace-nowrap px-3 py-4 text-neutral-700">{{ $trx->berat_kg !== null ? $kg($trx->berat_kg) : '-' }}</td>
-                                    <td class="px-3 py-4">
-                                        <span class="inline-block rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass[$trx->status] ?? 'bg-neutral-100 text-neutral-600' }}">{{ $statusLabel[$trx->status] ?? ucfirst($trx->status) }}</span>
+                                    <td class="whitespace-nowrap px-3 py-4 text-neutral-700">{{ $item->tanggal->locale('id')->translatedFormat('j M Y') }}</td>
+                                    <td class="whitespace-nowrap px-3 py-4 text-neutral-700">
+                                        @if ($item->berat === null)
+                                            -
+                                        @else
+                                            {{ $item->berat_perkiraan ? '≈ ' : '' }}{{ $kg($item->berat) }}
+                                        @endif
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-4 font-bold tabular-nums {{ $nilaiClass }}">{{ $penarikan ? '−' : '+' }}{{ $rupiah($trx->nilai) }}</td>
+                                    <td class="px-3 py-4">
+                                        <span class="inline-block rounded-full px-3 py-1 text-xs font-semibold {{ $statusClass[$item->status] ?? 'bg-neutral-100 text-neutral-600' }}">{{ $statusLabel[$item->status] ?? ucfirst($item->status) }}</span>
+                                    </td>
+                                    <td class="whitespace-nowrap px-4 py-4 font-bold tabular-nums {{ $nilaiClass }}">
+                                        @if ($item->nilai === null)
+                                            <span class="font-medium text-neutral-400">-</span>
+                                        @else
+                                            {{ $item->berat_perkiraan ? '≈ ' : ($penarikan ? '−' : '+') }}{{ $rupiah($item->nilai) }}
+                                        @endif
+                                    </td>
                                 </tr>
                             @endforeach
                         </tbody>

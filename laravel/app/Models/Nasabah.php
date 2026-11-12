@@ -27,6 +27,9 @@ class Nasabah extends Model
         'rw',
         'alamat_lengkap',
         'status',
+        'foto_path',
+        'metode_pencairan',
+        'nomor_rekening',
     ];
 
     protected function casts(): array
@@ -46,9 +49,20 @@ class Nasabah extends Model
         return $this->belongsTo(BankSampah::class);
     }
 
+    /** Nomor ID nasabah yang ditampilkan, mis. NAS-000012. */
+    public function kode(): string
+    {
+        return 'NAS-' . str_pad((string) $this->id, 6, '0', STR_PAD_LEFT);
+    }
+
     public function transaksi(): HasMany
     {
         return $this->hasMany(Transaksi::class);
+    }
+
+    public function pengajuanSetoran(): HasMany
+    {
+        return $this->hasMany(PengajuanSetoran::class);
     }
 
     /**

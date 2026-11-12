@@ -10,6 +10,10 @@
         fn ($word) => mb_strtoupper(mb_substr($word, 0, 1)),
         array_slice(preg_split('/\s+/', trim($user->name)), 0, 2)
     ));
+
+    // Data nasabah disiapkan middleware EnsureNasabahAktif. Foto profil dilayani lewat route privat.
+    $me = request()->attributes->get('nasabah');
+    $fotoUrl = $me?->foto_path ? route('nasabah.foto', ['v' => $me->updated_at?->timestamp]) : null;
 @endphp
 
 @section('header-nav')
@@ -28,7 +32,11 @@
                 <span class="block max-w-52 truncate text-sm font-semibold text-neutral-900">{{ $user->name }}</span>
                 <span class="block text-xs text-neutral-500">Nasabah Aktif</span>
             </span>
-            <span class="grid size-10 shrink-0 place-items-center rounded-full bg-[#2e7d32] text-sm font-semibold text-white transition group-open/menu:ring-4 group-open/menu:ring-[#2e7d32]/20">{{ $initials }}</span>
+            @if ($fotoUrl)
+                <img src="{{ $fotoUrl }}" alt="" class="size-10 shrink-0 rounded-full object-cover transition group-open/menu:ring-4 group-open/menu:ring-[#2e7d32]/20">
+            @else
+                <span class="grid size-10 shrink-0 place-items-center rounded-full bg-[#2e7d32] text-sm font-semibold text-white transition group-open/menu:ring-4 group-open/menu:ring-[#2e7d32]/20">{{ $initials }}</span>
+            @endif
         </summary>
 
         <div class="absolute right-0 top-full z-50 mt-3 w-60 rounded-xl border border-neutral-200 bg-white p-1.5 shadow-xl shadow-black/10">
@@ -40,9 +48,9 @@
                 <x-icon name="home" class="size-4 text-neutral-500" />
                 Beranda
             </a>
-            <a href="{{ route('home') }}" class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-neutral-700 transition hover:bg-neutral-50">
-                <x-icon name="recycle" class="size-4 text-neutral-500" />
-                Halaman utama
+            <a href="{{ route('nasabah.profil') }}" class="flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-sm text-neutral-700 transition hover:bg-neutral-50">
+                <x-icon name="user" class="size-4 text-neutral-500" />
+                Profil
             </a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf

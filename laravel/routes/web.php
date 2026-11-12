@@ -2,7 +2,13 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\KatalogController;
+use App\Http\Controllers\ProfilController;
 use App\Http\Controllers\RegistrationController;
+use App\Http\Controllers\RiwayatController;
+use App\Http\Controllers\SetorController;
+use App\Http\Controllers\TarikController;
+use App\Http\Middleware\EnsureNasabahAktif;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'landing')->name('home');
@@ -26,14 +32,30 @@ Route::controller(RegistrationController::class)->prefix('pendaftaran')->group(f
     Route::get('/berhasil', 'showBerhasil')->name('nasabah.register.berhasil');
 });
 
-// Area nasabah (harus login)
-Route::middleware('auth')->group(function () {
+// Area nasabah: harus login dan berstatus aktif
+Route::middleware(['auth', EnsureNasabahAktif::class])->group(function () {
     Route::get('/dashboard', DashboardController::class)->name('dashboard');
 
-    // Halaman di bawah ini belum dibuat: sementara menampilkan "segera hadir".
-    // Ganti dengan controller/view asli saat desainnya sudah ada.
-    Route::view('/setor-sampah', 'nasabah.segera', ['judul' => 'Setor Sampah Baru'])->name('nasabah.setor');
-    Route::view('/tarik-saldo', 'nasabah.segera', ['judul' => 'Tarik Saldo'])->name('nasabah.tarik');
-    Route::view('/harga-sampah', 'nasabah.segera', ['judul' => 'Harga Sampah'])->name('nasabah.harga');
-    Route::view('/riwayat', 'nasabah.segera', ['judul' => 'Riwayat Transaksi'])->name('nasabah.riwayat');
+    // Profil
+    Route::get('/profil', [ProfilController::class, 'show'])->name('nasabah.profil');
+    Route::post('/profil', [ProfilController::class, 'update'])->name('nasabah.profil.update');
+    Route::post('/profil/foto', [ProfilController::class, 'updateFoto'])->name('nasabah.profil.foto');
+    Route::get('/profil/foto', [ProfilController::class, 'foto'])->name('nasabah.foto');
+
+    // Setor sampah
+    Route::get('/setor-sampah', [SetorController::class, 'show'])->name('nasabah.setor');
+    Route::post('/setor-sampah', [SetorController::class, 'store'])->name('nasabah.setor.store');
+
+    // Tarik saldo
+    Route::get('/tarik-saldo', [TarikController::class, 'show'])->name('nasabah.tarik');
+    Route::post('/tarik-saldo', [TarikController::class, 'store'])->middleware('throttle:10,1')->name('nasabah.tarik.store');
+    Route::get('/tarik-saldo/berhasil', [TarikController::class, 'berhasil'])->name('nasabah.tarik.berhasil');
+
+    // Katalog harga sampah
+    Route::get('/harga-sampah', KatalogController::class)->name('nasabah.harga');
+
+    // Riwayat transaksi
+    Route::get('/riwayat', [RiwayatController::class, 'show'])->name('nasabah.riwayat');
+    Route::get('/riwayat/laporan', [RiwayatController::class, 'laporan'])->name('nasabah.riwayat.laporan');
+
 });
